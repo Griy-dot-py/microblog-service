@@ -1,0 +1,27 @@
+version: "3"
+services:
+
+  server:
+    build:
+      context: ".."
+      dockerfile: Docker/server.Dockerfile
+    ports:
+    - "80:80"
+    depends_on:
+    - api
+  
+  api:
+    build:
+      context: ".."
+      dockerfile: Docker/api.Dockerfile
+    depends_on:
+    - database
+  
+  database:
+    image: postgres:14.12
+    environment:
+    - POSTGRES_DB=${POSTGRES_DB}
+    - POSTGRES_USER=${POSTGRES_USER}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+    - 5432:5432
