@@ -7,7 +7,7 @@ docker compose -f Docker/docker-compose.yml --env-file config/.env up --build
 ### Running services separately:
 ##### database:
 ```
-docker run --name microblog-database -e POSTGRES_DB=microblog -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d --restart unless-stopped postgres:14.12
+docker run --name microblog-database -e POSTGRES_DB=microblog -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -dp 5432:5432 --restart unless-stopped -v ./.postgres:/var/lib/postgresql/data postgres:14.12
 ```
 ##### server:
 ```
