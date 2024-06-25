@@ -21,3 +21,4 @@ class User(Base):
     follows: Mapped[list["User"]] = relationship(
         secondary=follow, back_populates="followers"
     )
+    tweets: Mapped[list["Tweet"]] = relationship(back_populates="author")  # noqa

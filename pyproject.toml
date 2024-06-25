@@ -15,12 +15,15 @@ sqlalchemy = "^2.0.30"
 uvicorn = "^0.30.1"
 
 
-[tool.poetry.group.dev.dependencies]
+[tool.poetry.group.migration.dependencies]
 alembic = "^1.13.1"
+psycopg2-binary = "^2.9.9"
+
+
+[tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
 isort = "^5.13.2"
 mypy = "^1.10.0"
-psycopg2-binary = "^2.9.9"
 ruff = "^0.4.10"
 
 

@@ -12,13 +12,13 @@ tweet2media = Table(
 like = Table(
     "like",
     Base.metadata,
-    Column("user_id", ForeignKey("user.id")),
-    Column("tweet_id", ForeignKey("tweet.id")),
+    Column("user_id", ForeignKey("user.id"), primary_key=True),
+    Column("tweet_id", ForeignKey("tweet.id"), primary_key=True),
 )
 
 follow = Table(
     "follow",
     Base.metadata,
-    Column("user", ForeignKey("user.id")),
-    Column("follower", ForeignKey("user.id")),
+    Column("user", ForeignKey("user.id"), primary_key=True),
+    Column("follower", ForeignKey("user.id"), primary_key=True),
 )
