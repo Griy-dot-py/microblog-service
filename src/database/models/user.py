@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database.tables import follow, like
-
+from database.tables import like
 from .base import Base
 
 
@@ -14,11 +13,5 @@ class User(Base):
 
     likes: Mapped[list["Tweet"]] = relationship(  # noqa
         secondary=like, back_populates="likes"
-    )
-    followers: Mapped[list["User"]] = relationship(
-        secondary=follow, back_populates="follows"
-    )
-    follows: Mapped[list["User"]] = relationship(
-        secondary=follow, back_populates="followers"
     )
     tweets: Mapped[list["Tweet"]] = relationship(back_populates="author")  # noqa

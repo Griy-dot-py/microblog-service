@@ -15,10 +15,3 @@ like = Table(
     Column("user_id", ForeignKey("user.id"), primary_key=True),
     Column("tweet_id", ForeignKey("tweet.id"), primary_key=True),
 )
-
-follow = Table(
-    "follow",
-    Base.metadata,
-    Column("user", ForeignKey("user.id"), primary_key=True),
-    Column("follower", ForeignKey("user.id"), primary_key=True),
-)
