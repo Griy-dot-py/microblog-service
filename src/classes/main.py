@@ -2,6 +2,7 @@ from sqlalchemy import select
 
 from database import Session
 from database import models as orm
+from models import UserProfile
 
 from . import exc
 from .abc import MicroblogUserProtocol
@@ -22,3 +23,7 @@ class MicroblogUser(MicroblogUserProtocol):
                 raise exc.UserDoesNotExist(
                     f"User with api key '{self.__api_key}' not found"
                 )
+
+    @classmethod
+    async def check_profile(cls, user_id: int) -> UserProfile:
+        return await AuthorizedUser.check_user_profile(user_id)

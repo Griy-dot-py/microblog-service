@@ -1,11 +1,4 @@
-from . import Session, models, transaction
-
-
-async def upload_image(image: bytes) -> int:
-    async with transaction() as session:
-        new = models.Media(content=image)
-        session.add(new)
-    return new.id
+from . import Session, models
 
 
 async def download_images(ids: list[int]) -> list[models.Media]:

@@ -46,6 +46,12 @@ class AuthorizedUser(AuthorizedUserProtocol):
             session.add(new)
         return new.id
 
+    async def add_image(self, image: bytes) -> int:
+        async with transaction() as session:
+            new = orm.Media(content=image, author_id=self.__orm.id)
+            session.add(new)
+        return new.id
+
     async def del_tweet(self, tweet_id: int) -> None:
         async with self.__get_tweet(tweet_id) as tweet:
             if tweet.orm.author_id == self.__orm.id:
