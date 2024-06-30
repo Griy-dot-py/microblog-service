@@ -1,6 +1,7 @@
-from typing import AsyncGenerator, Any
 from contextlib import asynccontextmanager
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
+from typing import Any, AsyncGenerator
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import config.postgres as config
 

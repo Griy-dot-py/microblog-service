@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
-from .user import User
 from .like import Like
+from .user import User
+
 
 class TweetDump(BaseModel):
     id: int

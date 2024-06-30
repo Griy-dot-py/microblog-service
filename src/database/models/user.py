@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import like
+
 from .base import Base
 
 

@@ -1,0 +1,2 @@
+class MicroblogException(Exception):
+    pass

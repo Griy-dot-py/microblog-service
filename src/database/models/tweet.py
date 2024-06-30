@@ -15,7 +15,7 @@ class Tweet(Base):
     content: Mapped[str]
     author_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     creation_date: Mapped[datetime] = mapped_column(default=select(func.now()))
-    
+
     media: Mapped[list["Media"]] = relationship(  # noqa
         secondary=tweet2media, back_populates="tweets"
     )
