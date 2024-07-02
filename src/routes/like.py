@@ -5,7 +5,7 @@ from fastapi import APIRouter, Header
 from classes import MicroblogUser
 from models import Result
 
-likes = APIRouter(prefix="/{id}/likes")
+likes = APIRouter(prefix="/tweets/{id}/likes", tags=["like"])
 
 
 @likes.post("")

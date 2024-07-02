@@ -5,7 +5,7 @@ from fastapi import APIRouter, Header
 from classes import MicroblogUser
 from models import Result
 
-follow = APIRouter(prefix="/{id}/follow")
+follow = APIRouter(prefix="/users/{id}/follow", tags=["follow"])
 
 
 @follow.post("")

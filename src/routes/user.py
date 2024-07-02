@@ -5,10 +5,7 @@ from fastapi import APIRouter, Header
 from classes import MicroblogUser
 from models import GetProfileDump
 
-from .follow import follow
-
-users = APIRouter(prefix="/users")
-users.include_router(follow)
+users = APIRouter(prefix="/users", tags=["user"])
 
 
 @users.get("/me")

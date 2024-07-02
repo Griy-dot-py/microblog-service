@@ -5,10 +5,7 @@ from fastapi import APIRouter, Header
 from classes import MicroblogUser
 from models import Feed, PostTweetDump, Result, TweetLoad
 
-from .like import likes
-
-tweets = APIRouter(prefix="/tweets")
-tweets.include_router(likes)
+tweets = APIRouter(prefix="/tweets", tags=["tweet"])
 
 
 @tweets.post("")
@@ -28,6 +25,6 @@ async def delete_tweet(api_key: Annotated[str, Header()], id: int) -> Result:
 
 
 @tweets.get("")
-async def get_tweet(api_key: Annotated[str, Header()]) -> Feed:
+async def get_feed(api_key: Annotated[str, Header()]) -> Feed:
     user = await MicroblogUser(api_key=api_key).authorize()
     return Feed(tweets=await user.generate_feed())
