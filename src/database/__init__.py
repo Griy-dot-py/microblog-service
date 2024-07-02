@@ -13,7 +13,7 @@ url = SQLAlchemyURL(
     host=config.HOST,
     db=config.DB,
 )
-engine = create_async_engine(url.concatenate())
+engine = create_async_engine(url.concatenate(), echo=True)
 Session = async_sessionmaker(bind=engine)
 
 

@@ -1,7 +1,5 @@
-from sqlalchemy import select
-
 from database import Session
-from database import models as orm
+from database.queries import user
 from models import UserProfile
 
 from . import exc
@@ -15,9 +13,7 @@ class MicroblogUser(MicroblogUserProtocol):
 
     async def authorize(self) -> AuthorizedUser:
         async with Session() as session:
-            if result := await session.scalar(
-                select(orm.User).filter_by(api_key=self.__api_key)
-            ):
+            if result := await session.scalar(user(self.__api_key)):
                 return AuthorizedUser(orm_model=result)
             else:
                 raise exc.UserDoesNotExist(

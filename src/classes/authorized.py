@@ -1,12 +1,9 @@
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Iterable
-
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from typing import Any, AsyncGenerator
 
 from database import Session
 from database import models as orm
-from database import transaction
+from database import queries, transaction
 from database.funcs import download_images
 from models import Like, TweetDump, TweetLoad, User, UserProfile
 
@@ -22,7 +19,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
     @asynccontextmanager
     async def __get_user(user_id: int) -> AsyncGenerator[ext.UserContext, Any]:
         async with transaction() as session:
-            if user := session.get(orm.User, user_id):
+            if user := await session.get(orm.User, user_id):
                 yield ext.UserContext(session=session, orm=user)
             else:
                 raise exc.UserDoesNotExist(f"User with id '{user_id}' not found")
@@ -31,7 +28,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
     @asynccontextmanager
     async def __get_tweet(tweet_id: int) -> AsyncGenerator[ext.TweetContext, Any]:
         async with transaction() as session:
-            if tweet := session.get(orm.User, tweet_id):
+            if tweet := await session.get(orm.User, tweet_id):
                 yield ext.TweetContext(session=session, orm=tweet)
             else:
                 raise exc.UserDoesNotExist(f"Tweet with id '{tweet_id}' not found")
@@ -44,13 +41,15 @@ class AuthorizedUser(AuthorizedUserProtocol):
                 media=await download_images(tweet.tweet_media_ids),
             )
             session.add(new)
-        return new.id
+            await session.flush()
+            return new.id
 
     async def add_image(self, image: bytes) -> int:
         async with transaction() as session:
             new = orm.Media(content=image, author_id=self.__orm.id)
             session.add(new)
-        return new.id
+            await session.flush()
+            return new.id
 
     async def del_tweet(self, tweet_id: int) -> None:
         async with self.__get_tweet(tweet_id) as tweet:
@@ -61,13 +60,13 @@ class AuthorizedUser(AuthorizedUserProtocol):
 
     async def like(self, tweet_id: int) -> None:
         async with self.__get_tweet(tweet_id) as tweet:
-            if tweet.orm not in self.__orm.likes:
-                self.__orm.likes.append(tweet.orm)
+            if self.__orm not in tweet.orm.likes:
+                tweet.orm.likes.append(self.__orm)
 
     async def remove_like(self, tweet_id: int) -> None:
         async with self.__get_tweet(tweet_id) as tweet:
-            if tweet.orm in self.__orm.likes:
-                self.__orm.likes.remove(tweet.orm)
+            if self.__orm in tweet.orm.likes:
+                tweet.orm.likes.remove(self.__orm)
 
     async def follow(self, user_id: int) -> None:
         async with self.__get_user(user_id) as user:
@@ -81,39 +80,28 @@ class AuthorizedUser(AuthorizedUserProtocol):
 
     async def generate_feed(self) -> list[TweetDump]:
         async with Session() as session:
-            feed: Iterable[orm.Tweet] = await session.scalars(
-                select(orm.Tweet)
-                .join(orm.User)
-                .join(orm.Follow)
-                .filter_by(follower_id=self.__orm.id)
-                .options(joinedload(orm.Tweet.likes, orm.Tweet.author))
-                .order_by(orm.Tweet.creation_date.desc())
-            )
+            feed = await session.scalars(queries.feed(self.__orm))
             return [
                 TweetDump(
                     id=tweet.id,
                     content=tweet.content,
-                    attachments=[...],
+                    attachments=[],
                     author=User(id=tweet.author.id, name=tweet.author.name),
                     like=[
                         Like(user_id=user.id, name=user.name) for user in tweet.likes
                     ],
                 )
-                for tweet in feed
+                for tweet in feed.unique()
             ]
 
     async def check_profile(self) -> UserProfile:
-        return self.check_user_profile(user_id=self.__orm.id)
+        return await self.check_user_profile(user_id=self.__orm.id)
 
     @classmethod
     async def check_user_profile(cls, user_id: int) -> UserProfile:
         async with cls.__get_user(user_id) as user:
-            followers = await user.session.scalars(
-                select(orm.User).join(orm.Follow).filter_by(follower_id=user_id)
-            )
-            follows = await user.session.scalars(
-                select(orm.User).join(orm.Follow).filter_by(user_id=user_id)
-            )
+            followers = await user.session.scalars(queries.followers(user.orm))
+            follows = await user.session.scalars(queries.follows(user.orm))
             return UserProfile(
                 id=user_id,
                 name=user.orm.name,
