@@ -1,10 +1,5 @@
-from dotenv import find_dotenv, load_dotenv
+from .main import Settings
 
-if not find_dotenv():
-    exit("Cannot load environment variables. There's no .env file")
-else:
-    load_dotenv()
+settings = Settings()
 
-from . import postgres
-
-__all__ = [postgres]
+__all__ = [settings, Settings]

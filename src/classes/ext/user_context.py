@@ -8,4 +8,4 @@ from database.models import User
 @dataclass
 class UserContext:
     session: AsyncSession
-    orm: User
+    user: User

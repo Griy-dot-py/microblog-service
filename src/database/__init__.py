@@ -3,15 +3,15 @@ from typing import Any, AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-import config.postgres as config
+from config import settings
 
 from .url import SQLAlchemyURL
 
 url = SQLAlchemyURL(
-    user=config.USER,
-    password=config.PASSWORD,
-    host=config.HOST,
-    db=config.DB,
+    user=settings.POSTGRES_USER,
+    password=settings.POSTGRES_PASSWORD,
+    host=settings.POSTGRES_HOST,
+    db=settings.POSTGRES_DB,
 )
 engine = create_async_engine(url.concatenate(), echo=True)
 Session = async_sessionmaker(bind=engine)

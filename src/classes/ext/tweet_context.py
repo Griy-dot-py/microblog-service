@@ -8,4 +8,4 @@ from database.models import Tweet
 @dataclass
 class TweetContext:
     session: AsyncSession
-    orm: Tweet
+    tweet: Tweet

@@ -11,7 +11,11 @@ def feed(for_user: User) -> Select[Tuple[Tweet]]:
         select(Tweet)
         .join(Follow, Follow.user_id == Tweet.author_id)
         .where(Follow.follower_id == for_user.id)
-        .options(joinedload(Tweet.author, innerjoin=True), joinedload(Tweet.likes))
+        .options(
+            joinedload(Tweet.author, innerjoin=True),
+            joinedload(Tweet.likes),
+            joinedload(Tweet.media)
+        )
         .order_by(Tweet.creation_date.desc())
     )
 

@@ -17,21 +17,21 @@ class AuthorizedUser(AuthorizedUserProtocol):
 
     @staticmethod
     @asynccontextmanager
-    async def __get_user(user_id: int) -> AsyncGenerator[ext.UserContext, Any]:
+    async def __user_context(user_id: int) -> AsyncGenerator[ext.UserContext, Any]:
         async with transaction() as session:
             if user := await session.get(orm.User, user_id):
-                yield ext.UserContext(session=session, orm=user)
+                yield ext.UserContext(session=session, user=user)
             else:
                 raise exc.UserDoesNotExist(f"User with id '{user_id}' not found")
 
     @staticmethod
     @asynccontextmanager
-    async def __get_tweet(tweet_id: int) -> AsyncGenerator[ext.TweetContext, Any]:
+    async def __tweet_context(tweet_id: int) -> AsyncGenerator[ext.TweetContext, Any]:
         async with transaction() as session:
-            if tweet := await session.get(orm.User, tweet_id):
-                yield ext.TweetContext(session=session, orm=tweet)
+            if tweet := await session.get(orm.Tweet, tweet_id):
+                yield ext.TweetContext(session=session, tweet=tweet)
             else:
-                raise exc.UserDoesNotExist(f"Tweet with id '{tweet_id}' not found")
+                raise exc.TweetDoesNotExist(f"Tweet with id '{tweet_id}' not found")
 
     async def post_tweet(self, tweet: TweetLoad) -> int:
         async with transaction() as session:
@@ -52,31 +52,36 @@ class AuthorizedUser(AuthorizedUserProtocol):
             return new.id
 
     async def del_tweet(self, tweet_id: int) -> None:
-        async with self.__get_tweet(tweet_id) as tweet:
-            if tweet.orm.author_id == self.__orm.id:
-                tweet.session.delete(tweet.orm)
+        async with self.__tweet_context(tweet_id) as context:
+            if context.tweet.author_id == self.__orm.id:
+                await context.session.delete(context.tweet)
             else:
                 raise exc.NotOwnTweet("User cannot delete non it's own tweet")
 
     async def like(self, tweet_id: int) -> None:
-        async with self.__get_tweet(tweet_id) as tweet:
-            if self.__orm not in tweet.orm.likes:
-                tweet.orm.likes.append(self.__orm)
+        async with self.__tweet_context(tweet_id) as context:
+            tweet_likes: list[orm.User] = await context.tweet.awaitable_attrs.likes
+            ids = [user.id for user in tweet_likes]
+            if self.__orm.id not in ids:
+                tweet_likes.append(self.__orm)
 
     async def remove_like(self, tweet_id: int) -> None:
-        async with self.__get_tweet(tweet_id) as tweet:
-            if self.__orm in tweet.orm.likes:
-                tweet.orm.likes.remove(self.__orm)
+        async with self.__tweet_context(tweet_id) as context:
+            tweet_likes: list[orm.User] = await context.tweet.awaitable_attrs.likes
+            ids = [user.id for user in tweet_likes]
+            if self.__orm.id in ids:
+                like = ids.index(self.__orm.id)
+                tweet_likes.pop(like)
 
     async def follow(self, user_id: int) -> None:
-        async with self.__get_user(user_id) as user:
-            if await user.session.get(orm.Follow, (self.__orm.id, user_id)) is None:
-                user.session.add(orm.Follow(follower_id=self.__orm.id, user_id=user_id))
+        async with self.__user_context(user_id) as context:
+            if await context.session.get(orm.Follow, (self.__orm.id, user_id)) is None:
+                context.session.add(orm.Follow(follower_id=self.__orm.id, user_id=user_id))
 
     async def stop_following(self, user_id: int) -> None:
-        async with self.__get_user(user_id) as user:
-            if follow := await user.session.get(orm.Follow, (self.__orm.id, user_id)):
-                user.session.delete(follow)
+        async with self.__user_context(user_id) as context:
+            if follow := await context.session.get(orm.Follow, (self.__orm.id, user_id)):
+                await context.session.delete(follow)
 
     async def generate_feed(self) -> list[TweetDump]:
         async with Session() as session:
@@ -85,7 +90,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
                 TweetDump(
                     id=tweet.id,
                     content=tweet.content,
-                    attachments=[],
+                    attachments=[str(media.id) for media in tweet.media],
                     author=User(id=tweet.author.id, name=tweet.author.name),
                     like=[
                         Like(user_id=user.id, name=user.name) for user in tweet.likes
@@ -99,12 +104,12 @@ class AuthorizedUser(AuthorizedUserProtocol):
 
     @classmethod
     async def check_user_profile(cls, user_id: int) -> UserProfile:
-        async with cls.__get_user(user_id) as user:
-            followers = await user.session.scalars(queries.followers(user.orm))
-            follows = await user.session.scalars(queries.follows(user.orm))
+        async with cls.__user_context(user_id) as context:
+            followers = await context.session.scalars(queries.followers(context.user))
+            follows = await context.session.scalars(queries.follows(context.user))
             return UserProfile(
                 id=user_id,
-                name=user.orm.name,
+                name=context.user.name,
                 followers=[User(id=user.id, name=user.name) for user in followers],
                 following=[User(id=user.id, name=user.name) for user in follows],
             )
