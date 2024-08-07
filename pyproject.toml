@@ -8,16 +8,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+alembic = "^1.13.1"
 asyncpg = "^0.29.0"
 fastapi = "^0.111.0"
+psycopg2-binary = "^2.9.9"
 pydantic-settings = "^2.4.0"
 sqlalchemy = "^2.0.30"
 uvicorn = "^0.30.1"
-
-
-[tool.poetry.group.migration.dependencies]
-alembic = "^1.13.1"
-psycopg2-binary = "^2.9.9"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -34,6 +31,10 @@ faker = "^26.1.0"
 pillow = "^10.4.0"
 pytest-asyncio = "^0.23.8"
 
+
+
+[tool.poetry.group.tests.dependencies]
+pytest-asyncio-cooperative = "^0.37.0"
 
 [build-system]
 requires = ["poetry-core"]
