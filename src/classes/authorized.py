@@ -113,3 +113,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
                 followers=[User(id=user.id, name=user.name) for user in followers],
                 following=[User(id=user.id, name=user.name) for user in follows],
             )
+
+    @property
+    def id(self) -> int:
+        return self.__orm.id
