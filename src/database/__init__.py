@@ -24,5 +24,9 @@ async def transaction() -> AsyncGenerator[AsyncSession, Any]:
             yield session
 
 
-async def dispose():
-    await engine.dispose()
+@asynccontextmanager
+async def dispose_after_all():
+    try:
+        yield
+    finally:
+        await engine.dispose()

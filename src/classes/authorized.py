@@ -38,7 +38,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
             new = orm.Tweet(
                 content=tweet.tweet_data,
                 author_id=self.__orm.id,
-                media=await download_images(tweet.tweet_media_ids),
+                media=await download_images(session, tweet.tweet_media_ids),
             )
             session.add(new)
             await session.flush()
@@ -63,7 +63,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
             tweet_likes: list[orm.User] = await context.tweet.awaitable_attrs.likes
             ids = [user.id for user in tweet_likes]
             if self.__orm.id not in ids:
-                tweet_likes.append(self.__orm)
+                tweet_likes.append(await context.session.merge(self.__orm))
 
     async def remove_like(self, tweet_id: int) -> None:
         async with self.__tweet_context(tweet_id) as context:

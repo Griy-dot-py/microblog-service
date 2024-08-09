@@ -3,60 +3,34 @@ from random import choice, random
 
 from pytest import fixture
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from config import settings
 from tests import faker, Like, Tweet2Media
 from database.models import Base, Follow, Media, Tweet, User
 from models import TweetLoad
 
-
-@fixture
-def eng():
-    url = "postgresql+psycopg2://{user}:{passw}@{host}:5432/{db}".format(
+url = "postgresql+psycopg2://{user}:{passw}@{host}:5432/{db}".format(
         user=settings.POSTGRES_USER,
         passw=settings.POSTGRES_PASSWORD,
         host=settings.POSTGRES_HOST,
         db=settings.POSTGRES_DB,
-    )
-    engine = create_engine(url)
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-    yield engine
-    engine.dispose()
+)
+test_engine = create_engine(url)
+TestSession = sessionmaker(bind=test_engine)
 
-
-# @fixture(autouse=True)
-# def session(
-#     eng,
-#     orm_users,
-#     orm_follows,
-#     orm_tweets,
-#     likes,
-#     orm_medias,
-#     tweets2medias,
-# ):
-#     Base.metadata.drop_all(eng)
-#     Base.metadata.create_all(eng)
-    
-#     with Session(bind=eng) as session:
-#         with session.begin():
-#             session.add_all(orm_users)
-#             session.flush()
-#             for models in (orm_follows, orm_tweets, orm_medias):
-#                 session.add_all(models)
-#             session.flush()
-            
 
 @fixture
-def orm_users(eng):
+def orm_users():
+    Base.metadata.drop_all(test_engine)
+    Base.metadata.create_all(test_engine)
+    
     keys = [faker.password(length=12) for _ in range(3)]
     assert len(keys) == len({*keys})
     users = [User(api_key=key, name=faker.name()) for key in keys]
-    with Session(bind=eng) as session:
+    with TestSession() as session:
         with session.begin():
             session.add_all(users)
-        assert users[0].id is not None
         yield users
 
 
@@ -67,7 +41,7 @@ def orm_follows(eng, orm_users: list[User]):
     for _ in range(3):
         follower, user = follow_set.pop()
         follows.append(Follow(follower_id=follower.id, user_id=user.id))
-    with Session(bind=eng) as session:
+    with TestSession() as session:
         with session.begin():
             session.add_all(follows)
         yield follows
