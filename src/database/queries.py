@@ -19,6 +19,13 @@ def feed(for_user: User) -> Select[Tuple[Tweet]]:
         .order_by(Tweet.creation_date.desc())
     )
 
+def tweet(id: int) -> Select[Tuple[Tweet]]:
+    return (
+        select(Tweet)
+        .options(joinedload(Tweet.likes))
+        .where(Tweet.id == id)
+    )
+
 
 def followers(user: User) -> Select[Tuple[User]]:
     follower = aliased(User)

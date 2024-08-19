@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
-
+    TEST_MODE: bool
     model_config = SettingsConfigDict(env_file=ENV_PATHS[0])
 
 try:

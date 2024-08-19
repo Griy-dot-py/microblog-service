@@ -1,114 +1,122 @@
 from itertools import permutations
-from random import choice, random
+from random import choice
 
-from pytest import fixture
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+import pytest
+import pytest_asyncio
+from sqlalchemy import insert
 
-from config import settings
-from tests import faker, Like, Tweet2Media
+from tests import faker
+from database import engine, Session
 from database.models import Base, Follow, Media, Tweet, User
-from models import TweetLoad
-
-url = "postgresql+psycopg2://{user}:{passw}@{host}:5432/{db}".format(
-        user=settings.POSTGRES_USER,
-        passw=settings.POSTGRES_PASSWORD,
-        host=settings.POSTGRES_HOST,
-        db=settings.POSTGRES_DB,
-)
-test_engine = create_engine(url)
-TestSession = sessionmaker(bind=test_engine)
 
 
-@fixture
-def orm_users():
-    Base.metadata.drop_all(test_engine)
-    Base.metadata.create_all(test_engine)
+@pytest_asyncio.fixture
+async def test_session():
+    async with Session() as session:
+        yield session
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def prepare_db(
+    users: list[dict],
+    tweets: list[dict],
+    follows: list[dict],
+    likes: list[dict],
+    medias: list[dict],
+    tweets2medias: list[dict]
+):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
     
+    async with Session() as session:
+        async with session.begin():
+            await session.execute(insert(User), users)
+            await session.flush()
+            
+            await session.execute(insert(Follow), follows)
+            await session.execute(insert(Tweet), tweets)
+            await session.execute(insert(Media), medias)
+            await session.flush()
+            
+            for like in likes:
+                for user in users:
+                    if user["id"] == like["user_id"]:
+                        orm_user = await session.get(User, user["id"])
+                for tweet in tweets:
+                    if tweet["id"] == like["tweet_id"]:
+                        orm_tweet = await session.get(Tweet, tweet["id"])
+                (await orm_tweet.awaitable_attrs.likes).append(orm_user)
+                        
+            for tweet2media in tweets2medias:
+                for tweet in tweets:
+                    if tweet["id"] == tweet2media["tweet_id"]:
+                        orm_tweet = await session.get(Tweet, tweet["id"])
+                for media in medias:
+                    if media["id"] == tweet2media["media_id"]:
+                        orm_media = await session.get(Media, media["id"])
+                (await orm_tweet.awaitable_attrs.media).append(orm_media)
+
+
+@pytest.fixture
+def users():
     keys = [faker.password(length=12) for _ in range(3)]
     assert len(keys) == len({*keys})
-    users = [User(api_key=key, name=faker.name()) for key in keys]
-    with TestSession() as session:
-        with session.begin():
-            session.add_all(users)
-        yield users
+    return [dict(id=id, api_key=key, name=faker.name()) for id, key in zip(range(10, 13), keys)]
 
 
-@fixture
-def orm_follows(eng, orm_users: list[User]):
-    follow_set = {*permutations(orm_users, 2)}
+@pytest.fixture
+def follows(users: list[dict]):
+    follow_set = {*permutations([u["id"] for u in users], 2)}
     follows = []
     for _ in range(3):
-        follower, user = follow_set.pop()
-        follows.append(Follow(follower_id=follower.id, user_id=user.id))
-    with TestSession() as session:
-        with session.begin():
-            session.add_all(follows)
-        yield follows
+        follower_id, user_id = follow_set.pop()
+        follows.append(dict(follower_id=follower_id, user_id=user_id))
+    
+    return follows
 
 
-@fixture
-def orm_tweets(eng, orm_users: list[User]):
-    tweets = [
-        Tweet(
+@pytest.fixture
+def tweets(users: list[dict]):
+    tweets = [dict(id=10, content=faker.text(), author_id=users[0]["id"], creation_date=faker.date_time())]
+    tweets.extend([
+        dict(
+            id=id,
             content=faker.text(),
-            author_id=choice(orm_users).id,
+            author_id=choice(users)["id"],
             creation_date=faker.date_time()
-        ) for _ in range(7)
-    ]
-    with Session(bind=eng) as session:
-        with session.begin():
-            session.add_all(tweets)
-        yield tweets
+        ) for id in range(11, 17)
+    ])
+    
+    return tweets
 
 
-@fixture
-def likes(eng, orm_users: list[User], orm_tweets: list[Tweet]):
-    id_list = []
+@pytest.fixture
+def likes(users: list[dict], tweets: list[dict]):
+    id_list = [(users[0]["id"], choice(users)["id"])]
     while len(id_list) < 3:
-        ids = (choice(orm_users).id, choice(orm_tweets).id)
+        ids = (choice(users)["id"], choice(tweets)["id"])
         if ids not in id_list:
             id_list.append(ids)
-    likes = [Like(user_id=user_id, tweet_id=tweet_id) for user_id, tweet_id in id_list]
-    with Session(bind=eng) as session:
-        with session.begin():
-            for like in likes:
-                tweet = orm_tweets[like.tweet_id - 1]
-                user = orm_users[like.user_id - 1]
-                tweet.likes.append(user)
-        yield likes
-
-@fixture
-def orm_medias(eng, orm_users: list[User]):
-    medias = [Media(content=faker.image(), author_id=choice(orm_users).id) for _ in range(3)]
-    with Session(bind=eng) as session:
-        with session.begin():
-            session.add_all(medias)
-        yield medias
+    return [dict(user_id=user_id, tweet_id=tweet_id) for user_id, tweet_id in id_list]
 
 
-@fixture
-def tweets2medias(eng, session: Session, orm_tweets: list[Tweet], orm_medias: list[Media]):
+@pytest.fixture
+def medias(users: list[dict]):
+    return [
+        dict(
+            id=id,
+            content=faker.image(),
+            author_id=choice(users)["id"]
+        ) for id in range(10 ,13)
+    ]
+
+
+@pytest.fixture
+def tweets2medias(tweets: list[dict], medias: list[dict]):
     id_list = []
     while len(id_list) < 5:
-        ids = (choice(orm_tweets).id, choice(orm_medias).id)
+        ids = (choice(tweets)["id"], choice(medias)["id"])
         if ids not in id_list:
             id_list.append(ids)
-    ts2ms = [Tweet2Media(tweet_id=tweet_id, media_id=media_id) for tweet_id, media_id in id_list]
-    with Session(bind=eng) as session:
-        with session.begin():
-            for t2m in ts2ms:
-                tweet = orm_tweets[t2m.tweet_id - 1]
-                media = orm_medias[t2m.media_id - 1]
-                tweet.media.append(media)
-        yield ts2ms
-
-
-@fixture
-def tweet_load(orm_medias: list[Media]):
-    media_ids = {media.id for media in orm_medias}
-    added = []
-    for _ in range(2):
-        if random() < 5:
-            added.append(media_ids.pop())
-    return TweetLoad(tweet_data=faker.text(), tweet_media_ids=added)
+    return [dict(tweet_id=tweet_id, media_id=media_id) for tweet_id, media_id in id_list]

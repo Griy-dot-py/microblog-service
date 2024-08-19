@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from config import settings
 
@@ -13,15 +13,8 @@ url = SQLAlchemyURL(
     host=settings.POSTGRES_HOST,
     db=settings.POSTGRES_DB,
 )
-engine = create_async_engine(url.concatenate(), echo=True)
+engine = create_async_engine(url.concatenate(), echo=True, poolclass=NullPool)if settings.TEST_MODE else create_async_engine(url.concatenate())
 Session = async_sessionmaker(bind=engine)
-
-
-@asynccontextmanager
-async def transaction() -> AsyncGenerator[AsyncSession, Any]:
-    async with Session() as session:
-        async with session.begin():
-            yield session
 
 
 @asynccontextmanager
