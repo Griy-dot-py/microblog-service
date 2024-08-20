@@ -5,10 +5,9 @@ import pytest_asyncio
 from random import random
 from datetime import datetime, timezone
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests import faker, Like, Tweet2Media
+from tests import faker
 from database.models import User, Tweet, Media
 from models import TweetLoad
 from classes import AuthorizedUser
@@ -79,7 +78,7 @@ async def test_post_tweet(instance: AuthorizedUser, tweet_load: TweetLoad, test_
     orm_tweet = await test_session.get(Tweet, id)
     assert orm_tweet.content == tweet_load.tweet_data
     assert orm_tweet.author_id == instance.id
-    assert (orm_tweet.creation_date - now).seconds < 60
+    assert (now - orm_tweet.creation_date).seconds < 60
     assert {media.id for media in await orm_tweet.awaitable_attrs.media} == {*tweet_load.tweet_media_ids}
 
 
@@ -107,7 +106,7 @@ async def test_del_tweet(instance: AuthorizedUser, error: bool, tweets: list[dic
         
         await instance.del_tweet(tweet["id"])
         
-        assert await test_session.get(Tweet, id) is None
+        assert await test_session.get(Tweet, tweet["id"]) is None
     else:
         for tweet in tweets:
             if tweet["author_id"] != instance.id:
@@ -141,4 +140,4 @@ async def test_remove_like(instance: AuthorizedUser, likes: list[dict], test_ses
     await instance.remove_like(like["tweet_id"])
     
     orm_tweet = await test_session.get(Tweet, like["tweet_id"])
-    assert instance.id not in {user.id for user in orm_tweet.awaitable_attrs.likes}
+    assert instance.id not in {user.id for user in await orm_tweet.awaitable_attrs.likes}

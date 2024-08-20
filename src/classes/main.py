@@ -13,12 +13,13 @@ class MicroblogUser(MicroblogUserProtocol):
 
     async def authorize(self) -> AuthorizedUser:
         async with Session() as session:
-            if result := await session.scalar(user(self.__api_key)):
-                return AuthorizedUser(orm_model=result, session=session)
-            else:
-                raise exc.UserDoesNotExist(
-                    f"User with api key '{self.__api_key}' not found"
-                )
+            async with session.begin():
+                if result := await session.scalar(user(self.__api_key)):
+                    return AuthorizedUser(orm_model=result, session=session)
+                else:
+                    raise exc.UserDoesNotExist(
+                        f"User with api key '{self.__api_key}' not found"
+                    )
 
     @classmethod
     async def check_profile(cls, user_id: int) -> UserProfile:

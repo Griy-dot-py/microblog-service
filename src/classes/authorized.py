@@ -40,54 +40,54 @@ class AuthorizedUser(AuthorizedUserProtocol):
             raise exc.TweetDoesNotExist(f"Tweet with id '{tweet_id}' not found")
 
     async def post_tweet(self, tweet: TweetLoad) -> int:
-        async with self.__session.begin():
-            new = orm.Tweet(
-                content=tweet.tweet_data,
-                author_id=self.id,
-                media=await download_images(self.__session, tweet.tweet_media_ids),
-            )
-            self.__session.add(new)
-        return await new.awaitable_attrs.id
+        new = orm.Tweet(
+            content=tweet.tweet_data,
+            author_id=self.id,
+            media=await download_images(self.__session, tweet.tweet_media_ids),
+        )
+        self.__session.add(new)
+        await self.__session.flush()
+        return new.id
 
     async def add_image(self, image: bytes) -> int:
-        async with self.__session.begin():
-            new = orm.Media(content=image, author_id=self.__orm.id)
-            self.__session.add(new)
-        return await new.awaitable_attrs.id
+        new = orm.Media(content=image, author_id=self.__orm.id)
+        self.__session.add(new)
+        await self.__session.flush()
+        return new.id
 
     async def del_tweet(self, tweet_id: int) -> None:
-        async with self.__session.begin():
-            tweet = await self.__get_tweet(tweet_id)
-            if tweet.author_id == self.__orm.id:
-                await self.__session.delete(tweet)
-            else:
-                raise exc.NotOwnTweet("User cannot delete non it's own tweet")
+        tweet = await self.__get_tweet(tweet_id)
+        if tweet.author_id == self.__orm.id:
+            await self.__session.delete(tweet)
+            await self.__session.flush()
+        else:
+            raise exc.NotOwnTweet("User cannot delete non it's own tweet")
 
     async def like(self, tweet_id: int) -> None:
-        async with self.__session.begin():
-            tweet = await self.__get_tweet(tweet_id)
-            if self.__orm.id not in {u.id for u in tweet.likes}:
-                tweet_ses = self.__session.object_session(tweet)
-                tweet.likes.append(await tweet_ses.merge(self.__orm))
+        tweet = await self.__get_tweet(tweet_id)
+        if self.__orm.id not in {u.id for u in tweet.likes}:
+            tweet_ses = self.__session.object_session(tweet)
+            tweet.likes.append(await tweet_ses.merge(self.__orm))
+            await self.__session.flush()
 
     async def remove_like(self, tweet_id: int) -> None:
-        async with self.__session.begin():
-            tweet = await self.__get_tweet(tweet_id)
-            ids = [u.id for u in tweet.likes]
-            if self.__orm.id in ids:
-                tweet.likes.pop(ids.index(self.__orm.id))
+        tweet = await self.__get_tweet(tweet_id)
+        ids = [u.id for u in tweet.likes]
+        if self.__orm.id in ids:
+            tweet.likes.pop(ids.index(self.__orm.id))
+            await self.__session.flush()
 
     async def follow(self, user_id: int) -> None:
-        async with self.__session.begin():
-            await self.__get_user(user_id)
-            if await self.__session.get(orm.Follow, (self.__orm.id, user_id)) is None:
-                self.__session.add(orm.Follow(follower_id=self.__orm.id, user_id=user_id))
+        await self.__get_user(user_id)
+        if await self.__session.get(orm.Follow, (self.__orm.id, user_id)) is None:
+            self.__session.add(orm.Follow(follower_id=self.__orm.id, user_id=user_id))
+            await self.__session.flush()
 
     async def stop_following(self, user_id: int) -> None:
-        async with self.__session.begin():
-            await self.__get_user(user_id)
-            if follow := await self.__session.get(orm.Follow, (self.__orm.id, user_id)):
-                await self.__session.delete(follow)
+        await self.__get_user(user_id)
+        if follow := await self.__session.get(orm.Follow, (self.__orm.id, user_id)):
+            await self.__session.delete(follow)
+            await self.__session.flush()
 
     async def generate_feed(self) -> list[TweetDump]:
         feed = await self.__session.scalars(queries.feed(self.__orm))

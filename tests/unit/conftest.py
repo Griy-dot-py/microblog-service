@@ -13,7 +13,8 @@ from database.models import Base, Follow, Media, Tweet, User
 @pytest_asyncio.fixture
 async def test_session():
     async with Session() as session:
-        yield session
+        async with session.begin():
+            yield session
 
 
 @pytest_asyncio.fixture(autouse=True)
