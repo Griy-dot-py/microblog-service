@@ -2,14 +2,15 @@ import asyncio
 import pytest
 import pytest_asyncio
 
-from random import random
+from random import random, choice
 from datetime import datetime, timezone
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests import faker
-from database.models import User, Tweet, Media
-from models import TweetLoad
+from database.models import User, Tweet, Media, Follow
+from models import TweetLoad, TweetDump, UserProfile
 from classes import AuthorizedUser
 from classes.exc import UserDoesNotExist, TweetDoesNotExist, NotOwnTweet
 
@@ -120,7 +121,7 @@ async def test_like(instance: AuthorizedUser, likes: list[dict], test_session: A
     global loop
     
     for like in likes:
-        if like["user_id"] == instance.id:
+        if like["user_id"] != instance.id:
             break
     
     await instance.like(like["tweet_id"])
@@ -141,3 +142,89 @@ async def test_remove_like(instance: AuthorizedUser, likes: list[dict], test_ses
     
     orm_tweet = await test_session.get(Tweet, like["tweet_id"])
     assert instance.id not in {user.id for user in await orm_tweet.awaitable_attrs.likes}
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_follow(instance: AuthorizedUser, follows: list[dict], test_session: AsyncSession):
+    global loop
+    
+    for follow in follows:
+        if follow["follower_id"] != instance.id:
+            break
+    
+    await instance.follow(follow["user_id"])
+    
+    assert await test_session.get(Follow, (follow["follower_id"], follow["user_id"]))
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_stop_following(instance: AuthorizedUser, follows: list[dict], test_session: AsyncSession):
+    global loop
+    
+    for follow in follows:
+        if follow["follower_id"] == instance.id:
+            break
+    
+    await instance.stop_following(follow["user_id"])
+    
+    assert not await test_session.get(Follow, (follow["follower_id"], follow["user_id"]))
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_generate_feed(instance: AuthorizedUser, test_session: AsyncSession):
+    global loop
+    
+    feed = await instance.generate_feed()
+    tweet_order = tuple([tweet.id for tweet in feed])
+    expected_order = tuple(await test_session.scalars(
+        select(Tweet.id)
+        .join(Follow, Follow.user_id == Tweet.author_id)
+        .where(Follow.follower_id == instance.id)
+        .order_by(Tweet.creation_date.desc())
+    ))
+    rand_tweet = choice(feed)
+    rand_tweet_orm = await test_session.get(Tweet, rand_tweet.id)
+    
+    assert isinstance(rand_tweet, TweetDump)
+    assert rand_tweet.author.id == rand_tweet_orm.author_id
+    # assert rand_tweet.attachments
+    assert rand_tweet.content == rand_tweet_orm.content
+    assert {like.user_id for like in rand_tweet.like} == {u.id for u in await rand_tweet_orm.awaitable_attrs.likes}
+    assert tweet_order == expected_order
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_check_profile(instance: AuthorizedUser, test_session: AsyncSession):
+    global loop
+    
+    profile = await instance.check_profile()
+    followers = await test_session.scalars(
+        select(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .where(Follow.user_id == instance.id)
+    )
+    follows = await test_session.scalars(
+        select(User)
+        .join(Follow, Follow.user_id == User.id)
+        .where(Follow.follower_id == instance.id)
+    )
+    
+    assert isinstance(profile, UserProfile)
+    assert profile.id == instance.id
+    assert profile.name == instance.name
+    assert {u.id for u in profile.followers} == {u.id for u in followers}
+    assert {u.id for u in profile.following} == {u.id for u in follows}
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_check_user_profile(users: list[dict], follows: list[dict], test_session: AsyncSession):
+    global loop
+    
+    user = choice(users)
+    profile = await AuthorizedUser.check_user_profile(user["id"])
+    
+    assert isinstance(profile, UserProfile)
+    assert profile.id == user["id"]
+    assert profile.name == user["name"]
+    assert {u.id for u in profile.followers} == {follow["follower_id"] for follow in follows if follow["user_id"] == user["id"]}
+    assert {u.id for u in profile.following} == {follow["user_id"] for follow in follows if follow["follower_id"] == user["id"]}

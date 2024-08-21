@@ -1,6 +1,3 @@
-import asyncio
-
-from sqlalchemy.exc import MissingGreenlet
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Session
@@ -18,15 +15,14 @@ class AuthorizedUser(AuthorizedUserProtocol):
         self.__orm = orm_model
         self.__session = session
 
-    # def __del__(self):
-    #     loop = asyncio.get_event_loop()
-    #     loop.run_until_complete(self.__session.close())
-
     @property
     def id(self) -> int:
-        assert isinstance(self.__orm.id, int)
         return self.__orm.id
     
+    @property
+    def name(self) -> str:
+        return self.__orm.name
+
     async def __get_user(self, user_id: int) -> orm.User:
         if user := await self.__session.get(orm.User, user_id):
             return user
@@ -66,8 +62,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
     async def like(self, tweet_id: int) -> None:
         tweet = await self.__get_tweet(tweet_id)
         if self.__orm.id not in {u.id for u in tweet.likes}:
-            tweet_ses = self.__session.object_session(tweet)
-            tweet.likes.append(await tweet_ses.merge(self.__orm))
+            tweet.likes.append(self.__orm)
             await self.__session.flush()
 
     async def remove_like(self, tweet_id: int) -> None:
