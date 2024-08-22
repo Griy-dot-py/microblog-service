@@ -1,5 +1,5 @@
 from itertools import permutations
-from random import choice
+from random import choice, random
 
 import pytest
 import pytest_asyncio
@@ -8,6 +8,7 @@ from sqlalchemy import insert
 from tests import faker
 from database import engine, Session
 from database.models import Base, Follow, Media, Tweet, User
+from models import TweetLoad
 
 
 @pytest_asyncio.fixture
@@ -121,3 +122,13 @@ def tweets2medias(tweets: list[dict], medias: list[dict]):
         if ids not in id_list:
             id_list.append(ids)
     return [dict(tweet_id=tweet_id, media_id=media_id) for tweet_id, media_id in id_list]
+
+
+@pytest_asyncio.fixture
+async def tweet_load(medias: list[dict]):
+    media_ids = {media["id"] for media in medias}
+    added = []
+    for _ in range(2):
+        if random() < 5:
+            added.append(media_ids.pop())
+    return TweetLoad(tweet_data=faker.text(), tweet_media_ids=added)

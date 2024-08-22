@@ -2,7 +2,7 @@ import asyncio
 import pytest
 import pytest_asyncio
 
-from random import random, choice
+from random import choice
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -23,16 +23,6 @@ async def instance(test_session: AsyncSession, users: list[dict]):
 
     model = await test_session.get(User, users[0]["id"])
     return AuthorizedUser(orm_model=model, session=test_session)
-
-
-@pytest_asyncio.fixture
-async def tweet_load(medias: list[dict]):
-    media_ids = {media["id"] for media in medias}
-    added = []
-    for _ in range(2):
-        if random() < 5:
-            added.append(media_ids.pop())
-    return TweetLoad(tweet_data=faker.text(), tweet_media_ids=added)
 
 
 @pytest.mark.asyncio(loop_scope="module")
