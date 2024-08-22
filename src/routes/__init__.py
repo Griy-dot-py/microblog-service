@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 
 from classes import exc
 from models import Error
-from database import dispose_after_all
 
 from .follow import follow
 from .like import likes
@@ -18,7 +17,7 @@ api.include_router(medias)
 api.include_router(tweets)
 api.include_router(users)
 
-app = FastAPI(lifespan=dispose_after_all)
+app = FastAPI()
 app.include_router(api)
 
 
