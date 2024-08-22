@@ -69,7 +69,7 @@ def users():
 @pytest.fixture
 def follows(users: list[dict]):
     follow_set = {*permutations([u["id"] for u in users], 2)}
-    follows = []
+    follows = [dict(follower_id=users[0]["id"], user_id=users[0]["id"])]
     for _ in range(3):
         follower_id, user_id = follow_set.pop()
         follows.append(dict(follower_id=follower_id, user_id=user_id))

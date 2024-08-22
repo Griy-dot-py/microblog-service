@@ -36,6 +36,25 @@ async def tweet_load(medias: list[dict]):
 
 
 @pytest.mark.asyncio(loop_scope="module")
+async def test__init__(test_session: AsyncSession, users: list[dict]):
+    global loop
+    
+    user = choice(users)
+    model = await test_session.get(User, user["id"])
+    instance = AuthorizedUser(orm_model=model, session=test_session)
+    assert instance._AuthorizedUser__orm is model
+    assert instance._AuthorizedUser__session is test_session
+
+
+def test_id(instance: AuthorizedUser):
+    assert instance.id == instance._AuthorizedUser__orm.id
+
+
+def test_name(instance: AuthorizedUser):
+    assert instance.name == instance._AuthorizedUser__orm.name
+
+
+@pytest.mark.asyncio(loop_scope="module")
 @pytest.mark.parametrize("error", (False, True))
 async def test__get_user(instance: AuthorizedUser, users: list[dict], test_session: AsyncSession, error: bool):
     global loop
@@ -154,7 +173,7 @@ async def test_follow(instance: AuthorizedUser, follows: list[dict], test_sessio
     
     await instance.follow(follow["user_id"])
     
-    assert await test_session.get(Follow, (follow["follower_id"], follow["user_id"]))
+    assert await test_session.get(Follow, (instance.id, follow["user_id"]))
 
 
 @pytest.mark.asyncio(loop_scope="module")
@@ -217,7 +236,7 @@ async def test_check_profile(instance: AuthorizedUser, test_session: AsyncSessio
 
 
 @pytest.mark.asyncio(loop_scope="module")
-async def test_check_user_profile(users: list[dict], follows: list[dict], test_session: AsyncSession):
+async def test_check_user_profile(users: list[dict], follows: list[dict]):
     global loop
     
     user = choice(users)

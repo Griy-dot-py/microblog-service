@@ -1,6 +1,8 @@
+from typing import AsyncGenerator, Any
 from database import Session
 from database.queries import user
 from models import UserProfile
+from contextlib import asynccontextmanager
 
 from . import exc
 from .abc import MicroblogUserProtocol
@@ -11,11 +13,12 @@ class MicroblogUser(MicroblogUserProtocol):
     def __init__(self, api_key: str):
         self.__api_key = api_key
 
-    async def authorize(self) -> AuthorizedUser:
+    @asynccontextmanager
+    async def authorize(self) -> AsyncGenerator[AuthorizedUser, Any]:
         async with Session() as session:
             async with session.begin():
                 if result := await session.scalar(user(self.__api_key)):
-                    return AuthorizedUser(orm_model=result, session=session)
+                    yield AuthorizedUser(orm_model=result, session=session)
                 else:
                     raise exc.UserDoesNotExist(
                         f"User with api key '{self.__api_key}' not found"

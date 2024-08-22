@@ -10,8 +10,8 @@ users = APIRouter(prefix="/users", tags=["user"])
 
 @users.get("/me")
 async def get_me(api_key: Annotated[str, Header()]) -> GetProfileDump:
-    user = await MicroblogUser(api_key=api_key).authorize()
-    return GetProfileDump(user=await user.check_profile())
+    async with MicroblogUser(api_key=api_key).authorize() as user:
+        return GetProfileDump(user=await user.check_profile())
 
 
 @users.get("/{id}")
