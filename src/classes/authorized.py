@@ -18,7 +18,7 @@ class AuthorizedUser(AuthorizedUserProtocol):
     @property
     def id(self) -> int:
         return self.__orm.id
-    
+
     @property
     def name(self) -> str:
         return self.__orm.name
@@ -92,13 +92,11 @@ class AuthorizedUser(AuthorizedUserProtocol):
                 content=tweet.content,
                 attachments=[str(media.id) for media in tweet.media],
                 author=User(id=tweet.author.id, name=tweet.author.name),
-                like=[
-                    Like(user_id=user.id, name=user.name) for user in tweet.likes
-                ],
+                like=[Like(user_id=user.id, name=user.name) for user in tweet.likes],
             )
             for tweet in feed.unique()
         ]
-    
+
     async def check_profile(self) -> UserProfile:
         followers = await self.__session.scalars(queries.followers(self.__orm))
         follows = await self.__session.scalars(queries.follows(self.__orm))
@@ -112,6 +110,6 @@ class AuthorizedUser(AuthorizedUserProtocol):
     @classmethod
     async def check_user_profile(cls, user_id: int) -> UserProfile:
         async with Session() as session:
-            user = cls(session=session, orm_model=None)
+            user = cls(session=session, orm_model=orm.User())
             user.__orm = await user.__get_user(user_id)
             return await user.check_profile()

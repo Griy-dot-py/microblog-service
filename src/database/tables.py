@@ -16,4 +16,4 @@ like = Table(
     Column("tweet_id", ForeignKey("tweet.id"), primary_key=True),
 )
 
-__all__ = [tweet2media, like]
+__all__ = ["tweet2media", "like"]

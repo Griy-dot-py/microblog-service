@@ -36,7 +36,7 @@ def not_own_handler(request: Request, exc: exc.NotOwnTweet):
 
 
 @app.exception_handler(Exception)
-def server_exc_handler(request: Request, exc: Exception) -> Error:
+def server_exc_handler(request: Request, exc: Exception) -> JSONResponse:
     msg, *_ = exc.args
     return JSONResponse(
         Error(error_type=str(exc.__class__), error_message=msg).model_dump(), 500

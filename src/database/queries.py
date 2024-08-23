@@ -14,17 +14,14 @@ def feed(for_user: User) -> Select[Tuple[Tweet]]:
         .options(
             joinedload(Tweet.author, innerjoin=True),
             joinedload(Tweet.likes),
-            joinedload(Tweet.media)
+            joinedload(Tweet.media),
         )
         .order_by(Tweet.creation_date.desc())
     )
 
+
 def tweet(id: int) -> Select[Tuple[Tweet]]:
-    return (
-        select(Tweet)
-        .options(joinedload(Tweet.likes))
-        .where(Tweet.id == id)
-    )
+    return select(Tweet).options(joinedload(Tweet.likes)).where(Tweet.id == id)
 
 
 def followers(user: User) -> Select[Tuple[User]]:

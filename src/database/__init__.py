@@ -11,5 +11,9 @@ url = SQLAlchemyURL(
     host=settings.POSTGRES_HOST,
     db=settings.POSTGRES_DB,
 )
-engine = create_async_engine(url.concatenate(), echo=True, poolclass=NullPool)if settings.TEST_MODE else create_async_engine(url.concatenate())
+engine = (
+    create_async_engine(url.concatenate(), echo=True, poolclass=NullPool)
+    if settings.TEST_MODE
+    else create_async_engine(url.concatenate())
+)
 Session = async_sessionmaker(bind=engine)

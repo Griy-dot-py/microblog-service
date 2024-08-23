@@ -4,10 +4,12 @@ from models import TweetDump, TweetLoad, UserProfile
 
 
 class AuthorizedUserProtocol(Protocol):
+    @property
     def id(self) -> int: ...
-    
+
+    @property
     def name(self) -> str: ...
-    
+
     async def post_tweet(self, tweet: TweetLoad) -> int: ...
 
     async def add_image(self, image: bytes) -> int: ...

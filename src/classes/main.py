@@ -1,8 +1,9 @@
-from typing import AsyncGenerator, Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator
+
 from database import Session
 from database.queries import user
 from models import UserProfile
-from contextlib import asynccontextmanager
 
 from . import exc
 from .abc import MicroblogUserProtocol
