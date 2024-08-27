@@ -1,4 +1,22 @@
-# Development README
+<h1 align="center">Python Сервис микроблогов</h1>
+
+<h2 align="center">
+    <img src="https://img.shields.io/badge/python-3.12-blue">
+    <!-- <img src="https://img.shields.io/badge/fastapi-0.111.0-cyan">
+    <img src="https://img.shields.io/badge/fastapi-0.111.0-cyan"> -->
+</h2>
+
+Back-end сервиса микроблогов-аналога Twitter, реализованный с использованием языка python и асинхронного фреймровка FastAPI.
+
+## О поекте
+
+
+
+
+
+
+
+
 
 ### Run application:
 ```
