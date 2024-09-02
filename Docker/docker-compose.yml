@@ -11,6 +11,7 @@ services:
     - api
   
   api:
+    restart: always
     build:
       context: ".."
       dockerfile: Docker/api.Dockerfile
